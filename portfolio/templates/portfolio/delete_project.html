@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html>
+    <form method="post">{% csrf_token %}
+        <p>Are you sure you want to delete "{{ object.project_name }}"?</p>
+        <input type="submit" value="Confirm">
+    </form>
+</html>

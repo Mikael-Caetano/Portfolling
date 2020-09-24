@@ -1,0 +1,17 @@
+asgiref==3.2.10
+Django==3.1.1
+django-cleanup==5.1.0
+django-countries==6.1.3
+django-datetime-widget==0.9.3
+django-dynamic-formsets==0.0.8
+django-jquery==3.1.0
+django-phonenumber-field==5.0.0
+munch==2.5.0
+phonenumbers==8.12.9
+Pillow==7.2.0
+psycopg2==2.8.6
+python-dateutil==2.8.1
+pytz==2020.1
+pyuca==1.2
+six==1.15.0
+sqlparse==0.3.1

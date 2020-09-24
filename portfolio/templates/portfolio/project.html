@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        {% extends "portfolio/base.html" %}
+        {% block content %}
+        <h2>{{project.project_name}}</h2>
+        <p>{{project.project_description}}</p>
+        
+        {% for image in images %}
+        <img src="{{ image.image.url}}" class="img-responsive" style="width: 200px; height: 200px; margin-right: 10px;" /> 
+        {% endfor %}
+        {% endblock content %}
+    </body>
+</html>

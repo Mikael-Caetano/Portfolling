@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Portfolling</title>
+    </head>
+
+    <body>
+        {% block title %}
+        <a href="{% url 'portfolio:home' %}"><h1>Portfolling</h1></a>
+        {% endblock %}
+
+        {% block authentication %}
+        {% if not user.is_authenticated %}
+        <a class="click-me" href="{% url 'portfolio:signin' %}?next={{request.path}}">Sign in</a>
+        <a class="click-me" href="{% url 'portfolio:signup' %}?next={{request.path}}">Sign up</a>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+        <a class="click-me" href="{% url 'portfolio:signout' %}?next={{request.path}}">Sign out</a>
+        <a href="{% url 'portfolio:profile' user.username %}">Logged as {{user.username}}</a>
+        {% endif %}
+        {% endblock %}
+
+        {% block content %}{% endblock content %}
+    </body>
+</html>

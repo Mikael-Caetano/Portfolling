@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+    <header>
+    </header>
+
+    <body>
+        {% extends "portfolio/base.html" %}
+        {% load tags %}
+
+        {% block title %}
+        <h1>Portfolling</h1>
+        {% endblock %}
+
+        {% block content %}
+        <form method="get" action="{% url 'portfolio:home' %}">
+            <label for="search_bar">Name:</label>
+            <input id="search_bar" type="text" name="filter" placeholder="example: John Smith" value={{filter}}>
+
+            <label for="filter_career">Career:</label>
+            <select id="filter_career" type="option" name="filter_career" value={{filter_career}}>
+                <option value="All">All</option>
+                {% for career in career_options %}
+                    <option value={{career.0}} {% if filter_career == career.0 %} selected {% endif %}>{{career.1}}</option>
+                {% endfor %}
+            </select>
+
+            <label for="filter_country">Country:</label>
+            <select id="filter_country" type="option" name="filter_country" value={{filter_country}}>
+                <option value="All">All</option>
+                {% for country in countries %}
+                    <option value={{country.country_of_birth}} {% if filter_country == country.country_of_birth %} selected {% endif %}>{{country.country_of_birth.name}}</option>
+                {% endfor %}
+            </select>
+            <input type="submit" name="submit" value="submit"/>
+        </form>
+
+        {% if portfoller_list %}
+            <ul>
+            {% for portfoller in portfoller_list %}
+                <a href="{% url 'portfolio:profile' portfoller.username %}">
+                <div>
+                <li>{{portfoller.first_name}} {{portfoller.last_name}}</li>
+                <ul>
+                    <li>{{portfoller.career}}</li>
+                    <li>{{portfoller.country_of_birth}}</li>
+                </ul>
+                </div>
+                </a>
+            {% endfor %}
+            </ul>
+
+        {% else %}
+            <p>No Portfollers are available.</p>
+        {% endif %}
+
+        <div class="pagination">
+            <span class="step-links">
+                {% if is_paginated %}
+                    {% if page_obj.has_previous %}
+                        <a href="?{% param_replace page=1 %}">First</a>
+                        {% if page_obj.previous_page_number != 1 %}
+                        <a href="?{% param_replace page=page_obj.previous_page_number %}">Previous</a>
+                        {% endif %}
+                    {% endif %}
+
+                    Page {{ page_obj.number }} of {{ paginator.num_pages }}
+
+                    {% if page_obj.has_next %}
+                        {% if page_obj.next_page_number != paginator.num_pages %}
+                        <a href="?{% param_replace page=page_obj.next_page_number %}">Next</a>
+                        {% endif %}
+                        <a href="?{% param_replace page=paginator.num_pages %}">Last</a>
+                    {% endif %}
+
+                {% endif %}
+            </span>
+        </div>
+
+        {% endblock content %}
+    </body>
+</html>

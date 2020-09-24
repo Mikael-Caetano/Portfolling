@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+
+    </head>
+
+    <body>
+        {% extends "portfolio/base.html" %}
+        
+        {% block content %}
+        {% load static %}
+        <h2>{{portfoller.first_name}} {{portfoller.last_name}}</h2>
+        <img src="{{ portfoller.profile_picture.url}}" class="img-responsive" style="width: 200px; height: 200px; margin-right: 10px;" /> 
+        {% if profile_owner %}
+        <a href="{% url 'portfolio:edit_profile' request.user.username %}">
+        <img src="{% static 'portfolio/edit.png' %}" alt="edit profile" style="width:25px;height:25px;">
+        </a>
+        {% endif %}
+
+        <h3>Personal information:</h3>
+        <h4>{{portfoller.get_age}} years</h4>
+        <h4>{{portfoller.gender}}</h4>
+        <h4>{{portfoller.country_of_birth}}</h4>
+        <h4>{{portfoller.career}}</h4>
+
+        <h3>Biography:</h3>
+        <p>{{portfoller.biography}}</p>
+
+        <h3>Contact Information</h3>
+        <h4>{{portfoller.email}}</h4>
+
+        <h3>Projects:</h3>
+        {% if profile_owner %}
+        <a href="{% url 'portfolio:add_project' request.user.username %}">
+            <img src="{% static 'portfolio/add.png' %}" alt="add project" style="width:15px;height:15px;">
+        </a>
+        {% endif %}
+
+        <ul>
+        {% for project in project_list %}
+            <a href="{% url 'portfolio:project' portfoller.username project.project_name %}">
+                <li>{{project.project_name}}</li>
+            </a>
+            {% if profile_owner %}
+            <a href="{% url 'portfolio:edit_project' request.user.username project.project_name %}">
+                <img src="{% static 'portfolio/edit.png' %}" alt="edit project" style="width:10px;height:10px;">
+            </a>
+            <a href="{% url 'portfolio:delete_project' request.user.username project.project_name %}">
+                <img src="{% static 'portfolio/delete.png' %}" alt="delete project" style="width:10px;height:10px;">
+            </a>
+            {% endif %} 
+        {% endfor %}
+        </ul>
+    
+        {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+        {% endblock content %}
+    </body>
+</html>
