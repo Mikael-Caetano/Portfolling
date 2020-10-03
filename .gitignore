@@ -1,5 +1,5 @@
 portfoling/secrets.py
 
 portfoling/media/images/*
+portfoling/static/*
 
-!portfoling/media/images/.keep
