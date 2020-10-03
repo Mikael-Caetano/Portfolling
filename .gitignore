@@ -1,4 +1,4 @@
 portfoling/secrets.py
 
-portfoling/media/images/**
-portfoling/media/images/**/.gitkeep
+portfoling/media/images/*
+!portfoling/media/images/*/.gitkeep
