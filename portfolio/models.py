@@ -9,6 +9,7 @@ from django.utils import timezone
 from django_countries.fields import CountryField
 
 from .choices import *
+from .validators import validate_file_size
 
 
 #Setting directory path to profiles pictures
@@ -27,7 +28,7 @@ class Portfoller(AbstractUser):
     country_of_birth = CountryField()
     career = models.CharField(max_length=20, choices=CAREER_OPTIONS)
     email = models.EmailField(max_length=254, unique=True)
-    profile_picture = models.ImageField(upload_to=profile_picture_path, default='generic_user.png')
+    profile_picture = models.ImageField(upload_to=profile_picture_path, default='generic_user.png', validators=[validate_file_size])
     biography = models.TextField(max_length=1000, null=True, blank=True)
 
     def get_age(self):
@@ -35,10 +36,7 @@ class Portfoller(AbstractUser):
         return now.year - self.birthdate.year - ((now.month, now.day) < (self.birthdate.month, self.birthdate.day))
     
     def profile_owner(self, request_username): 
-        if request_username == self.username:
-            return True
-        else:
-            return False
+        return request_username == self.username
 
     def __str__(self):
         s = ' '
@@ -58,4 +56,4 @@ class Project(models.Model):
 
 class ProjectImages(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=project_images_path, null=True, blank=True)
+    image = models.ImageField(upload_to=project_images_path, null=True, blank=True, validators=[validate_file_size])

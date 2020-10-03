@@ -12,21 +12,22 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
+from .secrets import SECRET_KEY, DATABASE
+
+ALLOWED_HOSTS = ['*']
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '_lq9^hnlp1+(u$d$(#)h6&qmha0y_gu0bhpf#+20bmj^f_^ft('
+SECRET_KEY = SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = []
 
 #Setting Portfoller as User Model to Django Authentication System
 AUTH_USER_MODEL = 'portfolio.Portfoller'
@@ -98,14 +99,13 @@ WSGI_APPLICATION = 'portfoling.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'portfoling_database',
-        'USER': 'postgres',
-        'PASSWORD': 'superonze2',
-        'HOST': 'localhost',
+        'NAME': DATABASE['name'],
+        'USER': DATABASE['user'],
+        'PASSWORD': DATABASE['password'],
+        'HOST': 'postgres',
         'PORT': '5432' 
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -129,6 +129,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.1/topics/i18n/
 
+DATE_INPUT_FORMATS = ['%d-%m-%Y']
+
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -150,5 +152,3 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
 MEDIA_URL = '/media/'
-
-DATE_INPUT_FORMATS = ['%d-%m-%Y']

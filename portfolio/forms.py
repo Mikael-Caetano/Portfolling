@@ -14,7 +14,6 @@ from .models import *
 from .choices import *
 
 
-
 class SignUpForm(UserCreationForm):
     class Meta:
         model = Portfoller
@@ -61,4 +60,4 @@ class EditProjectForm(forms.ModelForm):
         model = Project
         fields = ['project_name','project_description']
 
-ProjectImagesFormSet = forms.inlineformset_factory(Project, ProjectImages, fields=('image',), extra=1, widgets={'image': NamedFileInput})
+ProjectImagesFormSet = forms.inlineformset_factory(Project, ProjectImages, fields=('image',), extra=1, widgets={'image': NamedFileInput}, max_num=30)

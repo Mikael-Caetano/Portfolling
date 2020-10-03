@@ -10,7 +10,7 @@
         {% load static %}
         {% block content %}
 
-        <h2>Edit project: {{project.project_name}}</h2>
+        <h2>Edit project: {{project}}</h2>
         <form method="post" enctype='multipart/form-data'>
           {% csrf_token %}
           {{ form.non_field_errors }}

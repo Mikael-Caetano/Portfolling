@@ -241,7 +241,7 @@
                 // NOTE: We re-query elements based on the selector to be sure
                 // we consider forms that have been added or removed in JS.
                 $$.append(row);
-                $($$.selector).filter(':last').after(row);
+                // $($$.selector).filter(':last').after(row);
 
                 row.find(childElementSelector).each(function() {
                     updateElementIndex($(this), options.prefix, formCount);

@@ -6,7 +6,7 @@ from django.views import generic, View
 from django.db import IntegrityError, transaction
 from django.db.models.functions import Concat
 from django.db.models import Value, Count
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -54,7 +54,7 @@ class ProfileView(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super(ProfileView, self).get_context_data(**kwargs)
         self.portfoller = get_object_or_404(Portfoller, username=self.kwargs['username'])
-        context['project_list'] = Project.objects.filter(user=self.portfoller)
+        context['project_list'] = Project.objects.filter(user=self.portfoller).order_by('project_name')
         context['profile_owner'] = self.portfoller.profile_owner(self.request.user.username)
         return context
 
@@ -67,9 +67,16 @@ class EditProfile(LoginRequiredMixin, generic.UpdateView):
     template_name = 'portfolio/edit_profile.html'
     slug_field = 'username'
     slug_url_kwarg = 'username'
+    login_url = '/signin/'
 
     def get_success_url(self):
-        return reverse('portfolio:profile', kwargs={'username': self.object.username})
+        return reverse('portfolio:profile', kwargs={'username': self.request.user.username})
+
+    def get_object(self, **kwargs):
+        profile_user = get_object_or_404(Portfoller, username=self.kwargs['username'])
+        if profile_user.profile_owner(self.request.user.username):
+            return profile_user
+        raise PermissionDenied
 
 class ProjectView(generic.DetailView):
     model = Project
@@ -83,19 +90,23 @@ class ProjectView(generic.DetailView):
         return context
 
     def get_object(self):
-        user = Portfoller.objects.get(username=self.kwargs['username'])
+        user = get_object_or_404(Portfoller, username=self.kwargs['username'])
         return get_object_or_404(Project, project_name=self.kwargs['project_name'], user=user)
 
 class AddProject(LoginRequiredMixin, View):
+    login_url = '/signin/'
+
     def get(self, request, username):
-        user = get_object_or_404(Portfoller, username=request.user.username)
+        user = get_object_or_404(Portfoller, username=username)
+        if not user.profile_owner(self.request.user.username):
+            raise PermissionDenied
         project = Project(user=user)
         form = AddProjectForm(initial={'user': user}, instance=project)
         formset = ProjectImagesFormSet(instance=project)
         return render(request, 'portfolio/add_project.html', {'form': form, 'formset': formset})
     
     def post(self, request, username):
-        user = get_object_or_404(Portfoller, username=request.user.username)
+        user = get_object_or_404(Portfoller, username=username)
         project = Project(user=user)
         form = AddProjectForm(request.POST, request.FILES, instance=project)
         formset = ProjectImagesFormSet(request.POST, request.FILES, instance=project)
@@ -107,26 +118,26 @@ class AddProject(LoginRequiredMixin, View):
                 if formset.is_valid():
                     created_project.save()
                     formset.save()
-                    return HttpResponseRedirect(reverse('portfolio:project', kwargs={'username': request.user.username, 'project_name': created_project.project_name}))
+                    return HttpResponseRedirect(reverse('portfolio:project', kwargs={'username': username, 'project_name': created_project.project_name}))
             except IntegrityError:
                 return render(request, 'portfolio/add_project.html', {'form': form, 'formset': formset})
         else:
             return render(request, 'portfolio/add_project.html', {'form': form, 'formset': formset}) 
     
-    def get_context_data(self, **kwargs):
-        context = super(AddProject, self).get_context_data(**kwargs)
-        self.portfoller = get_object_or_404(Portfoller, username=self.kwargs['username'])
-        return context
-    
 class EditProject(LoginRequiredMixin, View):
+    login_url = '/signin/'
+
     def get(self, request, username, project_name):
-        project = Project.objects.get(user=self.request.user, project_name=project_name)
+        user = get_object_or_404(Portfoller, username=username)
+        if not user.profile_owner(self.request.user.username):
+            raise PermissionDenied
+        project = Project.objects.get(user=user, project_name=project_name)
         form = EditProjectForm(instance=project)
         formset = ProjectImagesFormSet(instance=project)
-        return render(request, 'portfolio/edit_project.html', {'form': form, 'formset': formset})
+        return render(request, 'portfolio/edit_project.html', {'form': form, 'formset': formset, 'project': project})
     
     def post(self, request, username, project_name):
-        project = Project.objects.get(user=self.request.user, project_name=project_name)
+        project = Project.objects.get(user=request.user, project_name=project_name)
         form = EditProjectForm(request.POST, request.FILES, instance=project)
         formset = ProjectImagesFormSet(request.POST, request.FILES, instance=project)
         form.instance.user = request.user
@@ -137,17 +148,11 @@ class EditProject(LoginRequiredMixin, View):
                 if formset.is_valid():
                     created_project.save()
                     formset.save()
-                    return HttpResponseRedirect(reverse('portfolio:project', kwargs={'username': request.user.username, 'project_name': created_project.project_name}))
+                    return HttpResponseRedirect(reverse('portfolio:project', kwargs={'username': username, 'project_name': created_project.project_name}))
             except IntegrityError:
-                return render(request, 'portfolio/edit_project.html', {'form': form, 'formset': formset})
+                return render(request, 'portfolio/edit_project.html', {'form': form, 'formset': formset, 'project': project})
         else:
-            return render(request, 'portfolio/edit_project.html', {'form': form, 'formset': formset})
-
-    def get_context_data(self, **kwargs):
-        context = super(EditProject, self).get_context_data(**kwargs)
-        self.portfoller = get_object_or_404(Portfoller, username=self.kwargs['username'])
-        context['project'] = Project.objects.get(user=self.portfoller, project_name=self.kwargs['project_name'])
-        return context
+            return render(request, 'portfolio/edit_project.html', {'form': form, 'formset': formset, 'project': project})
     
 class DeleteProject(LoginRequiredMixin, generic.DeleteView):
     model = Project
@@ -155,13 +160,22 @@ class DeleteProject(LoginRequiredMixin, generic.DeleteView):
     template_name = 'portfolio/delete_project.html'
     slug_field = 'project_name'
     slug_url_kwarg = 'project_name'
+    login_url = '/signin/'
 
     def get_object(self):
-        project = Project.objects.get(user=self.request.user, project_name=self.kwargs['project_name'])
-        return project
+        profile_user = get_object_or_404(Portfoller, username=self.kwargs['username'])
+        if not profile_user.profile_owner(self.request.user.username):
+            raise PermissionDenied
+        return get_object_or_404(Project, user=profile_user, project_name=self.kwargs['project_name'])
 
     def get_success_url(self):
         return reverse('portfolio:profile', kwargs={'username': self.object.user.username})
+    
+    def get_context_data(self, **kwargs):
+        context = super(DeleteProject, self).get_context_data(**kwargs)
+        self.portfoller = get_object_or_404(Portfoller, username=self.kwargs['username'])
+        context['project'] = Project.objects.get(user=self.portfoller, project_name=self.kwargs['project_name'])
+        return context
 
 def signup(request):
     if request.method == 'POST':
@@ -172,7 +186,9 @@ def signup(request):
             raw_password = form.cleaned_data.get('password1')
             user = authenticate(username=username, password=raw_password)
             login(request, user)
-            return HttpResponseRedirect(request.GET.get('next', ''))
+            return HttpResponseRedirect(request.GET.get('next', reverse('portfolio:home')))
+        else:
+            return render(request, 'portfolio\signup.html', {'form': form})
     else:
         form = SignUpForm()
     return render(request, 'portfolio\signup.html', {'form': form})
@@ -185,7 +201,7 @@ def signin(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return HttpResponseRedirect(request.GET.get('next', ''))
+            return HttpResponseRedirect(request.GET.get('next', reverse('portfolio:home')))
         else:
             messages.add_message(
                 request, messages.ERROR, "Incorrect user or password"
@@ -195,11 +211,11 @@ def signin(request):
     else:
         form = SignInForm()
         if request.user.is_authenticated:
-            return HttpResponseRedirect(request.GET.get('next', ''))
+            return HttpResponseRedirect(request.GET.get('next', reverse('portfolio:home')))
         return render(request, 'portfolio\signin.html', {'form': form})
 
 def signout(request):
-    next_url = request.GET.get('next', '')
+    next_url = request.GET.get('next', reverse('portfolio:home'))
     escape_urls = ['add-project/', 'edit-project/', 'delete-project/', 'edit-profile/']
     for url in escape_urls:
         escape = re.findall(fr"{url}$", next_url)
