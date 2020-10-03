@@ -1,4 +1,5 @@
 #!/bin/bash
+#adding this to git detect change
 
 # Collect static files
 echo "Collect static files"
