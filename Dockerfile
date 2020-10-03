@@ -14,6 +14,7 @@ ENV DEBUG 0
 ENV PYTHONUNBUFFERED 1
 ENV LANG C.UTF-8
 ENV DATABASE_URL "postgres://portfolling:portfollingpassword@postgres:5432/portfolling_database"
+ENV SECRET_KEY "l2n8ixdildmhw&b)!eytrxgvq(ft3)^0cc057cqfpo^(zi@o7bs"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

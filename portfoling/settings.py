@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 from pathlib import Path
 import os
 from django.core.exceptions import ImproperlyConfigured
-from .secrets import SECRET_KEY, DATABASE
 
 ALLOWED_HOSTS = ['*']
 
@@ -24,10 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = SECRET_KEY
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = int(os.environ.get('DEBUG', default=0))
 
 #Setting Portfoller as User Model to Django Authentication System
 AUTH_USER_MODEL = 'portfolio.Portfoller'
@@ -99,9 +98,9 @@ WSGI_APPLICATION = 'portfoling.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': DATABASE['name'],
-        'USER': DATABASE['user'],
-        'PASSWORD': DATABASE['password'],
+        'NAME': 'portfolling_database',
+        'USER': 'portfolling',
+        'PASSWORD': 'portfollingpassword',
         'HOST': 'postgres',
         'PORT': '5432' 
     }
@@ -153,9 +152,3 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = os.path.join(PROJECT_DIR, 'media')
 MEDIA_URL = '/media/'
-
-"""
-Heroku database settings. 
-"""
-import dj_database_url
-DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
