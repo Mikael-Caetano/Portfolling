@@ -13,7 +13,7 @@ services:
     build: .
     image: django
     container_name: django
-    command: python manage.py runserver 0.0.0.0:8000
+    entrypoint: ./docker-entrypoint.sh
     volumes:
       - .:/app
     ports:

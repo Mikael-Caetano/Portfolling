@@ -3,3 +3,4 @@ portfoling/secrets.py
 portfoling/media/images/*
 portfoling/static/*
 
+__pycache__

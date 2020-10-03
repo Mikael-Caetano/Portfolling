@@ -8,12 +8,12 @@ COPY ./portfoling/ /app/
 COPY ./portfolio/ /app/
 COPY manage.py /app/
 
-
 # set default environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV DEBUG 0
 ENV PYTHONUNBUFFERED 1
 ENV LANG C.UTF-8
+ENV DATABASE_URL "postgres://portfolling:portfollingpassword@postgres:5432/portfolling_database"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
