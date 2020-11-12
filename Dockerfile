@@ -10,7 +10,7 @@ COPY manage.py /app/
 
 # set default environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
-ENV DEBUG 0
+ENV DEBUG 1
 ENV PYTHONUNBUFFERED 1
 ENV LANG C.UTF-8
 ENV DATABASE_URL "postgres://portfolling:portfollingpassword@postgres:5432/portfolling_database"

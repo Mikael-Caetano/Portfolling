@@ -18,7 +18,9 @@ class SignUpForm(UserCreationForm):
     class Meta:
         model = Portfoller
         fields = ('profile_picture', 'username', 'first_name', 'last_name', 'gender', 'birthdate', 'country_of_birth', 'career', 'biography', 'email', 'password1', 'password2', )
-        widgets = {'birthdate': DatePicker(attrs={
+        widgets = {
+        #Birthdate can be in a range from 120 years ago to the present day.
+        'birthdate': DatePicker(attrs={
         'min': dateformat.format(timezone.now() - relativedelta(years=120), 'Y-m-d'),
         'max': dateformat.format(timezone.now(), 'Y-m-d')}),
         'country_of_birth':CountrySelectWidget,
@@ -29,6 +31,7 @@ class SignInForm(AuthenticationForm):
 
 class AddProjectForm(forms.ModelForm):
     def clean(self):
+        #Verify if project_name is unique in the owner profile.
         cleaned_data = super().clean()
         project_name = cleaned_data.get("project_name")
         user = self.instance.user
@@ -44,6 +47,7 @@ class AddProjectForm(forms.ModelForm):
 
 class EditProjectForm(forms.ModelForm):
     def clean(self):
+        #Verify if project_name is unique in the owner profile.
         cleaned_data = super().clean()
         project_name = cleaned_data.get("project_name")
         user = self.instance.user
@@ -60,4 +64,5 @@ class EditProjectForm(forms.ModelForm):
         model = Project
         fields = ['project_name','project_description']
 
+#Inlineformset to manage project images in the AddProjectForm and EditProjectForm
 ProjectImagesFormSet = forms.inlineformset_factory(Project, ProjectImages, fields=('image',), extra=1, widgets={'image': NamedFileInput}, max_num=30)

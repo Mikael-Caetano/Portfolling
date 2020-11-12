@@ -1,5 +1,11 @@
 import re
 
+from rest_framework import viewsets, mixins, status, views, response
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import AllowAny
+
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views import generic, View
@@ -14,6 +20,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import *
 from .forms import *
 from .choices import *
+from .serializers import *
+from .permissions import *
 
 
 class HomeRedirect(generic.RedirectView):
@@ -26,6 +34,9 @@ class PortfollerList(generic.ListView):
     context_object_name = 'portfoller_list'
 
     def get_queryset(self):
+        """
+        Returns an filtered queryset based on the parameters passed on the GET request. 
+        """
         queryset = Portfoller.objects.annotate(fullname=Concat('first_name', Value(' '), 'last_name'))
         filter_val = self.request.GET.get('filter', '')
         filter_career = self.request.GET.get('filter_career', 'All')
@@ -70,6 +81,9 @@ class EditProfile(LoginRequiredMixin, generic.UpdateView):
     login_url = '/signin/'
 
     def get_success_url(self):
+        """
+        After the login the user is redirected to the requested profile.
+        """
         return reverse('portfolio:profile', kwargs={'username': self.request.user.username})
 
     def get_object(self, **kwargs):
@@ -224,3 +238,95 @@ def signout(request):
             return HttpResponseRedirect(reverse('portfolio:home'))
     logout(request) 
     return HttpResponseRedirect(next_url)
+
+#API
+class LoginView(views.APIView):
+    permission_classes = (permissions.AllowAny,)
+    authentication_classes = (SessionAuthentication,)
+    serializer_class = LoginSerializer
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        login(request, user)
+        return response.Response(PortfollerSerializer(user).data)
+
+class LogoutView(views.APIView):
+    def post(self, request):
+        logout(request)
+        return response.Response()
+
+class PortfollerViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsOwnerOrReadOnly]
+    lookup_field = 'username'
+
+    def get_queryset(self):
+        queryset = Portfoller.objects.annotate(fullname=Concat('first_name', Value(' '), 'last_name'))
+        return queryset.order_by('fullname')
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreatePortfollerSerializer
+        return PortfollerSerializer      
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    serializer_class = ProjectSerializer
+    permission_classes =[IsOwnerOrReadOnly]
+    lookup_field = 'project_name'
+    
+    def get_queryset(self):
+        portfoller = get_object_or_404(Portfoller, username=self.kwargs['username'])
+        return Project.objects.filter(user=portfoller).order_by('project_name')
+
+    def create(self, request, username):
+        try:
+            serializer = self.get_serializer(data=self.request.data)
+            portfoller = Portfoller.objects.get(username=username)
+            self.check_object_permissions(self.request, portfoller)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_304_NOT_MODIFIED)
+            data = serializer.validated_data
+            serializer.save(user=portfoller)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except IntegrityError:
+            raise serializers.ValidationError("Project name must be unique")
+    
+    def update(self, request, username, project_name, *args, **kwargs):
+        try:
+            portfoller = get_object_or_404(Portfoller, username=username)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data)
+            self.check_object_permissions(self.request, portfoller)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, headers=headers)
+        except IntegrityError:
+            raise serializers.ValidationError("Project name must be unique")
+
+class ProjectImageViewSet(mixins.CreateModelMixin, 
+                   mixins.RetrieveModelMixin, 
+                   mixins.DestroyModelMixin,
+                   mixins.ListModelMixin,
+                   viewsets.GenericViewSet):
+    serializer_class = ProjectImageSerializer
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        portfoller = get_object_or_404(Portfoller, username=self.kwargs['username'])
+        project = Project.objects.get(user=portfoller, project_name = self.kwargs['project_name'])
+        return ProjectImages.objects.filter(project=project)
+
+    def create(self, validated_data, username, project_name):
+        serializer = self.get_serializer(data=self.request.data)
+        portfoller = Portfoller.objects.get(username=username)
+        project = Project.objects.get(user=portfoller, project_name=project_name)
+        self.check_object_permissions(self.request, portfoller)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_304_NOT_MODIFIED)
+        data = serializer.validated_data
+        serializer.save(project=project)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

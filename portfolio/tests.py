@@ -1,15 +1,20 @@
-import os
+import os, json
 from dateutil.relativedelta import relativedelta
 import mock
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from django.conf import settings
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.files import File
+from django.forms.models import model_to_dict
 from django.urls import reverse
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.utils import timezone
 
+from rest_framework.test import APITestCase, APIRequestFactory
+
 from .models import *
+from .views import *
 
 
 #Testing Functions
@@ -45,6 +50,14 @@ def create_project(portfoller, project_name, project_description):
     `project_description` to the given `portfoller`.
     """
     return Project.objects.create(user=portfoller, project_name=project_name, project_description=project_description)
+
+def create_project_image(project):
+    """
+    Create a project image with the given `file` to the given `project`.
+    """
+    with open(os.getcwd() + '/portfoling/media/test_media/test_image.png', 'rb') as f:
+        image = SimpleUploadedFile(name='test_image.png', content=f.read())
+    return ProjectImages.objects.create(project=project, image=image)
 
 def get_expected(portfollers):
     expected_queryset = []
@@ -395,7 +408,7 @@ class SignUpViewTests(TestCase):
         The Portfoller instance is created after sign up and the user is logged in the signed up user account.
         """
         self.assertEqual(Portfoller.objects.count(), 0)
-        with open(os.getcwd() + '/portfoling\media/test_media/test_image.png', 'rb') as profile_picture:
+        with open(os.getcwd() + '/portfoling/media/test_media/test_image.png', 'rb') as profile_picture:
             response = self.client.post('/signup/', data={
                 'profile_picture': profile_picture, 'username': 'test_portfoller', 'first_name': 'Test',
                 'last_name': 'Test', 'gender': 'Male', 'birthdate': '2000-01-01', 'country_of_birth': 'BR',
@@ -443,3 +456,272 @@ class SignOutViewTests(TestCase):
         except KeyError:
             self.assertRaises(KeyError)
 
+
+#Viewsets  
+@tag('api')
+class PortfollerViewsetTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.portfoller1 = create_portfoller('test1')
+        cls.portfoller2 = create_portfoller('test2')
+    
+    def test_list_portfollers(self):
+        """
+        The list function returns a list of all created portfollers.
+        """
+        response = self.client.get('/api/portfollers/')
+        self.assertEqual(response.data['count'], 2)
+
+    def test_create_portfoller(self):
+        """
+        The create function creates a new portfoller with the passed data.
+        """
+        self.assertEqual(Portfoller.objects.count(), 2)
+        data = {'username': 'test3', 'password':'testpassword', 'first_name': 'test3', 'last_name': 'test3', 'gender': 'Male', 
+        'birthdate': '2020-11-01', 'country_of_birth': 'BR', 'career': 'Developer', 'email': 'test3@testmail.com'}
+        response = self.client.post('/api/portfollers/', data)
+        self.assertEqual(Portfoller.objects.count(), 3)
+        created_portfoller = get_object_or_404(Portfoller, username='test3')
+        expected_data = {'username': 'test3', 'first_name': 'test3', 'last_name': 'test3', 'gender': 'Male', 'career': 'Developer', 'email': 'test3@testmail.com'}
+        self.assertDictEqual(model_to_dict(created_portfoller, fields=['username', 'first_name', 'last_name', 'gender', 'career', 'email']), expected_data)
+
+    def test_retrieve_portfoller(self):
+        """
+        The retrieve function returns the correct portfoller with the correct data.
+        """
+        expected_data = {"username": "test1",
+    "first_name": "test1",
+    "last_name": "test1",
+    "gender": "Male",
+    "birthdate": "2000-01-01",
+    "country_of_birth": "BR",
+    "career": "Developer",
+    "email": "test1@testmail.com",
+    "profile_picture": "http://testserver/media/generic_user.png",
+    "biography": None,
+    "projects": [
+    ]}
+        response = self.client.get('/api/portfollers/test1/')
+        self.assertEqual(expected_data, response.data)
+
+    def test_edit_portfoller_owner(self):
+        """
+        The edit function changes the portfoller data correctly if the user is logged in the portfoller account.
+        """
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        expected_data = {"username": "test1",
+    "first_name": "test1",
+    "last_name": "test1",
+    "gender": "Male",
+    "birthdate": "2000-01-01",
+    "country_of_birth": "BR",
+    "career": "Developer",
+    "email": "test1@testmail.com",
+    "profile_picture": "http://testserver/media/generic_user.png",
+    "biography": 'test',
+    "projects": [
+    ]}
+        edit_data = {
+    "biography": "test"
+    }
+        response = self.client.patch('/api/portfollers/test1/', edit_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(expected_data, response.data)
+
+    def test_edit_portfoller_not_owner(self):
+        """
+        The edit function doesn't change the portfoller data if the user isn't logged in the portfoller account.
+        """
+        response = self.client.post('/api/login/', {'username': 'test2', 'password': 'testpassword'})
+        edit_data = {
+    "biography": "test"
+    }
+        response = self.client.patch('/api/portfollers/test1/', edit_data)
+        self.assertEqual(response.status_code, 403)
+
+@tag('api')
+class ProjectViewsetTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.portfoller1 = create_portfoller('test1')
+        cls.portfoller2 = create_portfoller('test2')
+        cls.project1 = create_project(cls.portfoller1, 'project1', 'test description')
+        cls.project2 = create_project(cls.portfoller1, 'project2', 'test description')
+    
+    def test_list_projects(self):
+        """
+        The list function returns a list of all portfoller projects.
+        """
+        response = self.client.get('/api/portfollers/test1/projects/')
+        self.assertEqual(response.data['count'], 2)
+
+    def test_create_project_owner(self):
+        """
+        The create function creates a new portfoller project with the passed data if the user is logged in the owner profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 2)
+        data = {'project_name': 'project3', 'project_description': 'test description'}
+        response = self.client.post('/api/portfollers/test1/projects/', data)
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 3)
+        created_project = get_object_or_404(Project, user=self.portfoller1, project_name='project3')
+        self.assertDictEqual(model_to_dict(created_project, fields=['project_name', 'project_description']), data)
+
+    def test_create_project_not_owner(self):
+        """
+        The create function doesn't create a new portfoller project if the user isn't logged in the owner profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test2', 'password': 'testpassword'})
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 2)
+        data = {'project_name': 'project3', 'project_description': 'test description'}
+        response = self.client.post('/api/portfollers/test1/projects/', data)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 2)
+    
+    def test_retrieve_project(self):
+        """
+        The retrieve function returns the correct project with the correct data.
+        """
+        expected_data = {
+            "project_name": "project1",
+            "project_description": "test description"
+        }
+        response = self.client.get('/api/portfollers/test1/projects/project1/')
+        self.assertEqual(expected_data, response.data)
+
+    def test_edit_project_description(self):
+        """
+        The edit function changes the project data correctly if the user is logged in the owner profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        edit_data = {
+            "project_name": "project1",
+            "project_description": "test description changed"
+        }
+        response = self.client.patch('/api/portfollers/test1/projects/project1/', edit_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(edit_data, response.data)
+
+    def test_edit_project_name_existent(self):
+        """
+        The edit function raises a `ValidationError` if the passed `project_name` is equal to other existent project in the profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        edit_data = {
+            "project_name": "project2"
+        }
+        response = self.client.patch('/api/portfollers/test1/projects/project1/', edit_data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_edit_project_name(self):
+        """
+        The edit function changes the project name correctly if the passed `project_name` is unique in the profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        edit_data = {
+            "project_name": "changed project name",
+            "project_description": "test description"
+        }
+        response = self.client.patch('/api/portfollers/test1/projects/project1/', edit_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(edit_data, response.data)
+
+    def test_edit_project_not_owner(self):
+        """
+        The edit function doesn't change the project data if the user isn't logged in the owner profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test2', 'password': 'testpassword'})
+        edit_data = {
+            "project_name": "project1",
+            "project_description": "test description changed"
+        }
+        response = self.client.patch('/api/portfollers/test1/', edit_data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_remove_project_owner(self):
+        """
+        The remove function excludes the project if the user is logged in the owner profile.
+        """
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 2)
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        response = self.client.delete('/api/portfollers/test1/projects/project1/')
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 1)
+
+    def test_remove_project_not_owner(self):
+        """
+        The remove function doesn't exclude the project if the user isn't logged in the owner profile.
+        """
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 2)
+        response = self.client.post('/api/login/', {'username': 'test2', 'password': 'testpassword'})
+        response = self.client.delete('/api/portfollers/test1/projects/project1/')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Project.objects.filter(user=self.portfoller1).count(), 2)
+
+@tag('api')
+class ProjectImageViewset(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.portfoller1 = create_portfoller('test1')
+        cls.portfoller2 = create_portfoller('test2')
+        cls.project1 = create_project(cls.portfoller1, 'project1', 'test description')
+        cls.project2 = create_project(cls.portfoller1, 'project2', 'test description')
+        cls.image1 = create_project_image(cls.project1)
+        cls.image2 = create_project_image(cls.project1)
+
+    def test_list_images(self):
+        """
+        The list function returns a list of all project images.
+        """
+        response = self.client.get('/api/portfollers/test1/projects/project1/images/')
+        self.assertEqual(response.data['count'], 2)
+
+    def test_create_image_owner(self):
+        """
+        The create function creates a new project image with the passed data if the user is logged in the owner profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 2)
+        with open(os.getcwd() + '/portfoling/media/test_media/test_image.png', 'rb') as f:
+            image = SimpleUploadedFile(name='test_image.png', content=f.read())
+        data = {'image': image}
+        response = self.client.post('/api/portfollers/test1/projects/project1/images/', data)
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 3)
+
+    def test_create_image_not_owner(self):
+        """
+        The create function doesn't create a new project image if the user isn't logged in the owner profile.
+        """
+        response = self.client.post('/api/login/', {'username': 'test2', 'password': 'testpassword'})
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 2)
+        with open(os.getcwd() + '/portfoling/media/test_media/test_image.png', 'rb') as f:
+            image = SimpleUploadedFile(name='test_image.png', content=f.read())
+        data = {'image': image}
+        response = self.client.post('/api/portfollers/test1/projects/project1/images/', data)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 2)
+    
+    def test_retrieve_image(self):
+        """
+        The retrieve function returns the correct project image successfully.
+        """
+        response = self.client.get('/api/portfollers/test1/projects/project1/images/' + str(self.image1.id) + '/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_remove_image_owner(self):
+        """
+        The remove function excludes the project image if the user is logged in the owner profile.
+        """
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 2)
+        response = self.client.post('/api/login/', {'username': 'test1', 'password': 'testpassword'})
+        response = self.client.delete('/api/portfollers/test1/projects/project1/images/' + str(self.image1.id) + '/')
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 1)
+
+    def test_remove_image_not_owner(self):
+        """
+        The remove function doesn't exclude the project image if the user isn't logged in the owner profile.
+        """
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 2)
+        response = self.client.post('/api/login/', {'username': 'test2', 'password': 'testpassword'})
+        response = self.client.delete('/api/portfollers/test1/projects/project1/images/' + str(self.image1.id) + '/')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(ProjectImages.objects.filter(project=self.project1).count(), 2)

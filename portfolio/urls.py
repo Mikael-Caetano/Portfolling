@@ -1,9 +1,16 @@
 from django.urls import path, include
 from django.conf import settings 
 from django.conf.urls.static import static 
+from rest_framework.routers import DefaultRouter
 from . import views, models
 
 app_name = 'portfolio'
+
+#API URLs
+router = DefaultRouter()
+router.register('portfollers', views.PortfollerViewSet, basename='portfollers')
+router.register('portfollers/(?P<username>\w+)/projects', views.ProjectViewSet, basename='projects')
+router.register('portfollers/(?P<username>\w+)/projects/(?P<project_name>\w+)/images', views.ProjectImageViewSet, basename='images')
 
 #URLs when in a project page.
 urlprojects = [
@@ -28,6 +35,9 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),
     path('signin/', views.signin, name='signin'),
     path('signout/', views.signout, name='signout'),
+    path('api/', include(router.urls)),
+    path('api/login/', views.LoginView.as_view(), name='api-login'),
+    path('api/logout/', views.LogoutView.as_view(), name='api-logout'),
 ]
 
 if settings.DEBUG: 
