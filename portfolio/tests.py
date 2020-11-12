@@ -1,11 +1,12 @@
-import os, json
-from dateutil.relativedelta import relativedelta
+import os
+import json
 import mock
-from django.core.files.uploadedfile import SimpleUploadedFile
+from dateutil.relativedelta import relativedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.files import File
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.forms.models import model_to_dict
 from django.urls import reverse
 from django.test import TestCase, tag
@@ -20,7 +21,7 @@ from .views import *
 #Testing Functions
 def create_portfoller(username, first_name=None, last_name=None, email=None, password='testpassword', gender='Male', birthdate='2000-01-01', country_of_birth='BR', career='Developer', biography=None):
     """
-    Create a portfoller with the given `username` and `password`, and gives it
+    Create a portfoller with the given `username`, and gives it
     all the other fields information.
     Returns the created portfoller.
     """

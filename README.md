@@ -28,7 +28,7 @@ docker-compose up
 If you get an "standard_init_linux.go:211: exec user process caused "no such file or directory" error:
 Checkout that the "End of line sequence" setting of the file docker-entrypoint.sh is LF, otherwise change it to LF.
 
-5. Open your browser and go to 127.0.0.1:8000 or localhost, the application should be running.
+5. Open your browser and go to 127.0.0.1:8000 or localhost, the application should be running. If you want to test the API you can use the Browsable API, to do that you can follow the API urls listed below.
 
 ## API documentation:
 api/login/:  
