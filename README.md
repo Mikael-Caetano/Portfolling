@@ -1,5 +1,5 @@
 # Portfolling
-A simple portfolio site, in which you can create your account, add your projects and images to it. Beside that you can search for other users profiles, and see their projects. It includes and RESTful API.  
+A simple portfolio site, in which you can create your account, add your projects and images to it. Beside that you can search for other users profiles, and see their projects. It includes an RESTful API.  
 
 ##How to install and run:  
 Pre-requisites:  
